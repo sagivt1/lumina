@@ -40,7 +40,6 @@ def run_consumer():
 async def lifespan(app: FastAPI):
     t = threading.Thread(target=run_consumer, daemon=True)
     t.start()
-
     yield
 
 
