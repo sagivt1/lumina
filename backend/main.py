@@ -1,33 +1,40 @@
+import json
 import threading
+from contextlib import asynccontextmanager
 
-import time
 import pika
 from fastapi import FastAPI
-from contextlib import asynccontextmanager
 
 
 def run_consumer():
+    try:
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
+        channel = connection.channel()
+        channel.queue_declare(queue="health_check", durable=False)
 
-    while True:
-        try:
-            connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
-            channel = connection.channel()
-            channel.queue_declare(queue="health_check", durable=False)
+        def callback(ch, method, properties, body):
+            try:
+                data = json.loads(body)
 
+                user_id = data.get("user", {}).get("sub", "Unknown")
 
-            def callback(ch, method, properties, body):
-                print(f"[*] User A Received: {body.decode()}", flush=True)
+                print(f"[User A] Secure Task recived for user: {user_id}", flush=True)
+                print(f"         Content: {data.get('content')}", flush=True)
+            except json.JSONDecodeError:
+                print("[!] Error: Received malformed JSON message.")
 
-            channel.basic_consume(
-                queue="health_check", on_message_callback=callback, auto_ack=True
-            )
+        channel.basic_qos(prefetch_count=1)
+        channel.basic_consume(
+            queue="health_check", on_message_callback=callback, auto_ack=True
+        )
+        print("[*] User A: waiting for messages...")
+        channel.start_consuming()
 
-            print("[*] User A: waiting for messages...")
-            channel.start_consuming()
-        except pika.exceptions.AMQPConnectionError:
-            print("[!] RabbitMQ not ready yet. Retrying in 5s...", flush=True)
-        except Exception as e:
-            print(f"[!] Connection faild: {e}", flush=True)
+    except pika.exceptions.AMQPConnectionError:
+        print("[!] RabbitMQ not ready yet. Retrying in 5s...", flush=True)
+    except Exception as e:
+        print(f"[!] Connection faild: {e}", flush=True)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,7 +43,9 @@ async def lifespan(app: FastAPI):
 
     yield
 
+
 app = FastAPI(lifespan=lifespan)
+
 
 @app.get("/")
 def read_root():
