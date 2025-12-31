@@ -25,10 +25,12 @@ def run_consumer():
 
                     if os.path.exists(file_path):
                         size = os.path.getsize(file_path)
-                        print(f" File Found : {file_path}", flush=True)
-                        print(f" Size       : {size / 1024:.2f} KB", flush=True)
+                        print(f"        File Found : {file_path}", flush=True)
+                        print(f"        Size       : {size / 1024:.2f} KB", flush=True)
                     else:
-                        print(f" Error : File not found at {file_path}", flush=True)
+                        print(
+                            f"        Error : File not found at {file_path}", flush=True
+                        )
                 except json.JSONDecodeError:
                     print(" [!] Error: Received malformed JSON message.", flush=True)
 
