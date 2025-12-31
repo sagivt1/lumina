@@ -90,7 +90,7 @@ app.post('/upload', checkJwt, upload.single('file'), async (req, res) => {
       persistent: true                  
     });
 
-    console.log(` [User B] Uploaded & Queued: ${taskId}`);
+    console.log(` [User B] Uploaded & Queued: ${taskId} \n Path: ${payload.file_path}` );
 
     await channel.close();
     await conn.close();
