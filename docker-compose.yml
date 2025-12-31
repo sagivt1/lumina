@@ -16,6 +16,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./shared_uploads:/shared_data/uploads
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -24,8 +25,9 @@ services:
     build: ./gateway
     ports:
       - "3000:3000"
+    volumes:
+      - ./gateway:/app
+      - ./shared_uploads:/shared_data/upload
     depends_on:
       rabbitmq:
         condition: service_healthy
-    
-      

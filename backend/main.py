@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 from contextlib import asynccontextmanager
 
@@ -9,33 +10,39 @@ from fastapi import FastAPI
 def run_consumer():
     while True:
         try:
-            
-            connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
+            connection = pika.BlockingConnection(
+                pika.ConnectionParameters(host="rabbitmq")
+            )
             channel = connection.channel()
-            channel.queue_declare(queue="health_check", durable=False)
-    
+            channel.queue_declare(queue="task_queue", durable=False)
+
             def callback(ch, method, properties, body):
                 try:
                     data = json.loads(body)
-    
-                    user_id = data.get("user", {}).get("sub", "Unknown")
-    
-                    print(f"[User A] Secure Task recived for user: {user_id}", flush=True)
-                    print(f"         Content: {data.get('content')}", flush=True)
+                    file_path = data.get("file_path")
+
+                    print(f" [User A] Recived Task: {data['task_id']}")
+
+                    if os.path.exists(file_path):
+                        size = os.path.getsize(file_path)
+                        print(f"File Found : {file_path}")
+                        print(f"Size       : {size / 1024:.2f} KB")
+                    else:
+                        print(f"Error : File not found at {file_path}")
                 except json.JSONDecodeError:
-                    print("[!] Error: Received malformed JSON message.")
-    
+                    print(" [!] Error: Received malformed JSON message.")
+
             channel.basic_qos(prefetch_count=1)
             channel.basic_consume(
-                queue="health_check", on_message_callback=callback, auto_ack=True
+                queue="task_queue", on_message_callback=callback, auto_ack=True
             )
-            print("[*] User A: waiting for messages...")
+            print(" [*] User A: Listening on 'task_queue'...")
             channel.start_consuming()
-    
+
         except pika.exceptions.AMQPConnectionError:
-            print("[!] RabbitMQ not ready yet. Retrying in 5s...", flush=True)
+            print(" [!] RabbitMQ not ready yet. Retrying in 5s...", flush=True)
         except Exception as e:
-            print(f"[!] Connection faild: {e}", flush=True)
+            print(f" [!] Connection faild: {e}", flush=True)
 
 
 @asynccontextmanager
