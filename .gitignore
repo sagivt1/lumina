@@ -43,7 +43,6 @@ coverage.xml
 # ===========================
 # 📦 Node.js (Gateway/Frontend)
 # ===========================
-# Dependencies (Crucial: Never commit these!)
 node_modules/
 gateway/node_modules/
 
@@ -84,3 +83,9 @@ Desktop.ini
 # JetBrains (PyCharm/WebStorm)
 .idea/
 *.iml
+
+
+# ===========================
+# Shared Folder
+# ===========================
+shared_uploads/
