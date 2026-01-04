@@ -10,15 +10,35 @@ services:
       timeout: 5s
       retries: 5
 
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: lumina
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: luminadb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lumina -d luminadb"]
+      interval: 5s
+      retries: 5
+
   backend:
     build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://lumina:password@db:5432/luminadb       
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - /app/.venv
       - ./shared_uploads:/shared_data/uploads
     depends_on:
       rabbitmq:
+        condition: service_healthy
+      db:
         condition: service_healthy
 
   gateway:
@@ -31,3 +51,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+
+volumes:
+  postgres_data:
