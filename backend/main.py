@@ -4,17 +4,17 @@ import threading
 from contextlib import asynccontextmanager
 
 import pika
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from sentence_transformers import SentenceTransformer
 from sqlmodel import Session
 
-from db import Document, DocumentChunk, engine, init_db
+from db import Document, DocumentChunk, engine, get_session, init_db, search_documents
+from schemas import QueryRequest
 
 # Load Model once
 model = None
 
 def process_file(file_path: str, task_id: str, user_id: str, original_name: str):
-
     try:
         print(f" [AI] Starting processing for {original_name}...")
 
@@ -108,3 +108,33 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/")
 def read_root():
     return {"service": "lumina backend", "status": "OK", "lifespan": "enabled"}
+
+
+@app.post("/query")
+def query_documents(request: QueryRequest, session: Session = Depends(get_session)):
+                    
+    try:
+        print(f" [AI] Querying: {request.query}", flush=True)
+        query_vector = model.encode(request.query).tolist()
+
+        results = search_documents(session, query_vector, request.user_id)
+
+        if not results:
+            return {"answer": "I couldn't find any relevant information.", 
+                    "sources": []}
+        
+        context_text = "\n\n".join([f"Source ({r[1]}): {r[0]}" for r in results])
+        sources = list(set([r[1] for r in results]))
+
+        # for testing
+        generated_answer = f"""
+        **Simulated AI Answer:**\n
+        Based on your documents, I found the following information:\n\n{context_text}
+        """
+        
+        return {"answer": generated_answer, "sources": sources}
+        
+    except Exception as e:
+        print(f" [!] Query Error: {e}", flush=True)
+        return {"error": str(e)}
+   
